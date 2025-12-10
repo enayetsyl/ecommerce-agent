@@ -4,7 +4,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppContext } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
-import { Home, ShoppingBag, ShoppingCart, LogIn, LogOut } from "lucide-react";
+import {
+  Home,
+  ShoppingBag,
+  ShoppingCart,
+  LogIn,
+  LogOut,
+  LayoutDashboard,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Navbar = () => {
@@ -17,6 +24,14 @@ export const Navbar = () => {
     { href: "/products", label: "Products", icon: ShoppingBag },
     { href: "/cart", label: "Cart", icon: ShoppingCart },
   ];
+
+  if (isAuthenticated) {
+    navItems.push({
+      href: "/dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+    });
+  }
 
   const handleLogout = () => {
     logout();

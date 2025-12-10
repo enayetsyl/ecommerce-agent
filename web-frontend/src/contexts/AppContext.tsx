@@ -8,6 +8,7 @@ interface AppContextType {
   isAuthenticated: boolean;
   user: User | null;
   setUser: (user: User | null) => void;
+  setIsAuthenticated: (value: boolean) => void;
   logout: () => void;
 }
 
@@ -59,10 +60,36 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setIsAuthenticated(false);
   };
 
+  // Sync authentication state with localStorage on mount
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      const userData = localStorage.getItem("user");
+
+      if (token && userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          setUser(parsedUser);
+          setIsAuthenticated(true);
+        } catch (error) {
+          console.error("Error parsing user data:", error);
+          // Clear invalid data
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          setIsAuthenticated(false);
+        }
+      } else {
+        setIsAuthenticated(false);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const value: AppContextType = {
     isAuthenticated,
     user,
     setUser,
+    setIsAuthenticated,
     logout,
   };
 
