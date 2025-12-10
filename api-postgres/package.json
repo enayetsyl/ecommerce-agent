@@ -6,13 +6,20 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "start": "node dist/index.js",
     "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prisma:generate": "prisma generate",
+    "prisma:studio": "prisma studio",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:db:pull": "prisma db pull",
+    "db:create-users": "ts-node scripts/create-users-table.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@prisma/adapter-pg": "^7.1.0",
+    "@prisma/client": "^7.1.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
@@ -24,6 +31,7 @@
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^7.0.11",
     "pg": "^8.16.3",
+    "prisma": "^7.1.0",
     "response-time": "^2.3.4",
     "zod": "^4.1.13"
   },

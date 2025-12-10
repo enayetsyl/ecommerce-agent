@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Product {
+  id           BigInt    @id @db.BigInt
+  title        String    @db.Text
+  handle       String    @unique @db.Text
+  body_html    String?   @db.Text
+  vendor       String?   @db.Text
+  product_type String?   @map("product_type") @db.Text
+  created_at   DateTime? @map("created_at") @db.Timestamptz(6)
+  updated_at   DateTime? @map("updated_at") @db.Timestamptz(6)
+  published_at DateTime? @map("published_at") @db.Timestamptz(6)
+  tags         String[]  @db.Text
+  raw_json     Json      @map("raw_json") @db.JsonB
+
+  options ProductOption[]
+  images  ProductImage[]
+  variants Variant[]
+
+  @@map("products")
+  @@index([vendor], map: "idx_products_vendor")
+  @@index([product_type], map: "idx_products_product_type")
+}
+
+model ProductOption {
+  id         Int      @id @default(autoincrement())
+  product_id BigInt   @map("product_id") @db.BigInt
+  name       String   @db.Text
+  position   Int?
+  values     String[] @db.Text
+
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@map("product_options")
+}
+
+model ProductImage {
+  id         BigInt   @id @db.BigInt
+  product_id BigInt   @map("product_id") @db.BigInt
+  position   Int?
+  src        String   @db.Text
+  alt        String?  @db.Text
+  width      Int?
+  height     Int?
+  raw_json   Json     @map("raw_json") @db.JsonB
+
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+  @@index([product_id], map: "idx_product_images_product_id")
+}
+
+model Variant {
+  id                BigInt    @id @db.BigInt
+  product_id        BigInt    @map("product_id") @db.BigInt
+  title             String?   @db.Text
+  sku               String?   @db.Text
+  option1           String?   @db.Text
+  option2           String?   @db.Text
+  option3           String?   @db.Text
+  requires_shipping Boolean?  @map("requires_shipping")
+  taxable           Boolean?
+  available         Boolean?
+  price             Decimal?  @db.Decimal(10, 2)
+  compare_at_price  Decimal?  @map("compare_at_price") @db.Decimal(10, 2)
+  grams             Int?
+  position          Int?
+  created_at        DateTime? @map("created_at") @db.Timestamptz(6)
+  updated_at        DateTime? @map("updated_at") @db.Timestamptz(6)
+  raw_json          Json      @map("raw_json") @db.JsonB
+
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@map("variants")
+  @@index([product_id], map: "idx_variants_product_id")
+}
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String    @unique @db.Text
+  password_hash String    @map("password_hash") @db.Text
+  name          String?   @db.Text
+  created_at    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("users")
+  @@index([email])
+}

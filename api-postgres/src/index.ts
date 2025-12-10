@@ -12,6 +12,9 @@ import {
   getProductWithDetails,
   searchProducts,
 } from "./services/products.service";
+import authRoutes from "./routes/auth.routes";
+import { errorHandler } from "./middleware/errorHandler";
+import { sendSuccess } from "./utils/sendResponse";
 
 // Load environment variables
 dotenv.config();
@@ -44,8 +47,11 @@ app.use(express.json());
 
 // Health check endpoint
 app.get("/health", (req: Request, res: Response) => {
-  res.json({ status: "ok" });
+  sendSuccess(res, { status: "ok" }, "Server is healthy");
 });
+
+// API Routes
+app.use("/api/auth", authRoutes);
 
 // Get all products
 app.get("/products", async (req: Request, res: Response) => {
@@ -105,6 +111,9 @@ app.get("/products/handle/:handle", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to fetch product" });
   }
 });
+
+// Error handling middleware (must be last)
+app.use(errorHandler);
 
 // Start server
 app.listen(PORT, () => {
