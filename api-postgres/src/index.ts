@@ -5,14 +5,8 @@ import helmet from "helmet";
 import hpp from "hpp";
 import rateLimit from "express-rate-limit";
 import responseTime from "response-time";
-import {
-  getAllProducts,
-  getProductById,
-  getProductByHandle,
-  getProductWithDetails,
-  searchProducts,
-} from "./services/products.service";
 import authRoutes from "./routes/auth.routes";
+import productsRoutes from "./routes/products.routes";
 import { errorHandler } from "./middleware/errorHandler";
 import { sendSuccess } from "./utils/sendResponse";
 
@@ -52,65 +46,7 @@ app.get("/health", (req: Request, res: Response) => {
 
 // API Routes
 app.use("/api/auth", authRoutes);
-
-// Get all products
-app.get("/products", async (req: Request, res: Response) => {
-  try {
-    const searchQuery = req.query.q as string | undefined;
-
-    let products;
-    if (searchQuery) {
-      products = await searchProducts(searchQuery);
-    } else {
-      products = await getAllProducts();
-    }
-
-    res.json(products);
-  } catch (error) {
-    console.error("Error fetching products:", error);
-    res.status(500).json({ error: "Failed to fetch products" });
-  }
-});
-
-// Get product by ID
-app.get("/products/:id", async (req: Request, res: Response) => {
-  try {
-    const id = parseInt(req.params.id);
-
-    if (isNaN(id)) {
-      return res.status(400).json({ error: "Invalid product ID" });
-    }
-
-    const product = await getProductWithDetails(id);
-
-    if (!product) {
-      return res.status(404).json({ error: "Product not found" });
-    }
-
-    res.json(product);
-  } catch (error) {
-    console.error("Error fetching product:", error);
-    res.status(500).json({ error: "Failed to fetch product" });
-  }
-});
-
-// Get product by handle (slug)
-app.get("/products/handle/:handle", async (req: Request, res: Response) => {
-  try {
-    const handle = req.params.handle;
-    const product = await getProductByHandle(handle);
-
-    if (!product) {
-      return res.status(404).json({ error: "Product not found" });
-    }
-
-    const productWithDetails = await getProductWithDetails(product.id);
-    res.json(productWithDetails);
-  } catch (error) {
-    console.error("Error fetching product by handle:", error);
-    res.status(500).json({ error: "Failed to fetch product" });
-  }
-});
+app.use("/products", productsRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
