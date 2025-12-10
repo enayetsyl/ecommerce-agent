@@ -7,6 +7,7 @@ import rateLimit from "express-rate-limit";
 import responseTime from "response-time";
 import authRoutes from "./routes/auth.routes";
 import productsRoutes from "./routes/products.routes";
+import checkoutRoutes from "./routes/checkout.routes";
 import { errorHandler } from "./middleware/errorHandler";
 import { sendSuccess } from "./utils/sendResponse";
 
@@ -35,14 +36,27 @@ app.use(limiter);
 // Response time tracking
 app.use(responseTime());
 
-// CORS and JSON parsing
+// CORS
 app.use(cors());
-app.use(express.json());
 
 // Health check endpoint
 app.get("/health", (req: Request, res: Response) => {
   sendSuccess(res, { status: "ok" }, "Server is healthy");
 });
+
+// Checkout webhook route (must be before JSON parsing middleware for raw body)
+import { handleStripeWebhook } from "./controllers/webhook.controller";
+app.post(
+  "/api/checkout/webhook",
+  express.raw({ type: "application/json" }),
+  handleStripeWebhook
+);
+
+// JSON parsing (after webhook route)
+app.use(express.json());
+
+// Checkout routes (session creation - excludes webhook)
+app.use("/api/checkout", checkoutRoutes);
 
 // API Routes
 app.use("/api/auth", authRoutes);

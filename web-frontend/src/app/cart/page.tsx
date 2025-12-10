@@ -1,14 +1,45 @@
 "use client";
 
+import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
+import { useAppContext } from "@/contexts/AppContext";
 import { CartItem } from "@/components/cart/CartItem";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShoppingBag, ShoppingCart } from "lucide-react";
+import { ShoppingBag, ShoppingCart, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { checkoutApi } from "@/lib/api/checkout";
+import { toast } from "sonner";
 
 export default function CartPage() {
   const { cart, clearCart } = useCart();
+  const { user } = useAppContext();
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleCheckout = async () => {
+    if (cart.items.length === 0) {
+      toast.error("Your cart is empty");
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const response = await checkoutApi.createCheckoutSession(cart.items);
+      if (response.success && response.data.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = response.data.url;
+      } else {
+        toast.error("Failed to create checkout session");
+      }
+    } catch (error: any) {
+      console.error("Checkout error:", error);
+      toast.error(
+        error.response?.data?.error || "Failed to proceed to checkout"
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   if (cart.items.length === 0) {
     return (
@@ -79,8 +110,20 @@ export default function CartPage() {
                 </div>
               </div>
 
-              <Button size="lg" className="w-full" disabled>
-                Proceed to Checkout
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={handleCheckout}
+                disabled={isProcessing || cart.items.length === 0}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Proceed to Checkout"
+                )}
               </Button>
               <Link href="/products">
                 <Button variant="outline" size="lg" className="w-full">

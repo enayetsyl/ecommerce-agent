@@ -45,3 +45,8 @@ export const protect = catchAsync(
     next();
   }
 );
+
+// Helper function to get user ID from request (optional, doesn't throw error)
+export const getUserIdFromRequest = (req: Request): string | undefined => {
+  return req.user?.userId;
+};

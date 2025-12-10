@@ -92,6 +92,49 @@ model User {
   created_at    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updated_at    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  orders Order[]
+
   @@map("users")
   @@index([email])
+}
+
+model Order {
+  id                String      @id @default(uuid()) @db.Uuid
+  user_id           String?     @map("user_id") @db.Uuid
+  stripe_session_id String?     @unique @map("stripe_session_id") @db.Text
+  stripe_payment_intent_id String? @map("stripe_payment_intent_id") @db.Text
+  status            String      @default("pending") @db.Text // pending, paid, failed, cancelled
+  total_amount      Decimal     @map("total_amount") @db.Decimal(10, 2)
+  currency          String      @default("usd") @db.Text
+  shipping_address  Json?       @map("shipping_address") @db.JsonB
+  billing_address   Json?       @map("billing_address") @db.JsonB
+  created_at        DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updated_at        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user       User?        @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  order_items OrderItem[]
+
+  @@map("orders")
+  @@index([user_id], map: "idx_orders_user_id")
+  @@index([stripe_session_id], map: "idx_orders_stripe_session_id")
+  @@index([status], map: "idx_orders_status")
+}
+
+model OrderItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  order_id    String   @map("order_id") @db.Uuid
+  product_id  BigInt   @map("product_id") @db.BigInt
+  variant_id  BigInt?  @map("variant_id") @db.BigInt
+  product_title String @map("product_title") @db.Text
+  variant_title  String? @map("variant_title") @db.Text
+  quantity    Int      @db.Integer
+  price       Decimal  @db.Decimal(10, 2)
+  total_price Decimal  @map("total_price") @db.Decimal(10, 2)
+  created_at  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  order Order @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@map("order_items")
+  @@index([order_id], map: "idx_order_items_order_id")
+  @@index([product_id], map: "idx_order_items_product_id")
 }
