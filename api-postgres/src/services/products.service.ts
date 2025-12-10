@@ -13,6 +13,10 @@ export interface Product {
   published_at: Date | null;
   tags: string[];
   raw_json: unknown;
+  image?: {
+    src: string;
+    alt: string | null;
+  } | null;
 }
 
 export interface ProductWithDetails extends Product {
@@ -53,19 +57,35 @@ export interface PaginatedResponse<T> {
   };
 }
 
-const mapProduct = (product: any): Product => ({
-  id: Number(product.id),
-  title: product.title,
-  handle: product.handle,
-  body_html: product.body_html,
-  vendor: product.vendor,
-  product_type: product.product_type,
-  created_at: product.created_at,
-  updated_at: product.updated_at,
-  published_at: product.published_at,
-  tags: product.tags,
-  raw_json: product.raw_json,
-});
+const mapProduct = (product: any): Product => {
+  // Get the first image (sorted by position)
+  const firstImage =
+    product.images && product.images.length > 0
+      ? product.images.sort(
+          (a: any, b: any) => (a.position || 0) - (b.position || 0)
+        )[0]
+      : null;
+
+  return {
+    id: Number(product.id),
+    title: product.title,
+    handle: product.handle,
+    body_html: product.body_html,
+    vendor: product.vendor,
+    product_type: product.product_type,
+    created_at: product.created_at,
+    updated_at: product.updated_at,
+    published_at: product.published_at,
+    tags: product.tags,
+    raw_json: product.raw_json,
+    image: firstImage
+      ? {
+          src: firstImage.src,
+          alt: firstImage.alt,
+        }
+      : null,
+  };
+};
 
 export const getAllProducts = async (
   options?: PaginationOptions
@@ -81,6 +101,17 @@ export const getAllProducts = async (
       skip,
       take: limit,
       orderBy: { [sortBy]: order },
+      include: {
+        images: {
+          orderBy: { position: "asc" },
+          take: 1, // Only get the first image
+          select: {
+            src: true,
+            alt: true,
+            position: true,
+          },
+        },
+      },
     }),
     prisma.product.count(),
   ]);
@@ -99,6 +130,17 @@ export const getAllProducts = async (
 export const getProductById = async (id: number): Promise<Product | null> => {
   const product = await prisma.product.findUnique({
     where: { id: BigInt(id) },
+    include: {
+      images: {
+        orderBy: { position: "asc" },
+        take: 1,
+        select: {
+          src: true,
+          alt: true,
+          position: true,
+        },
+      },
+    },
   });
 
   if (!product) {
@@ -113,6 +155,17 @@ export const getProductByHandle = async (
 ): Promise<Product | null> => {
   const product = await prisma.product.findUnique({
     where: { handle },
+    include: {
+      images: {
+        orderBy: { position: "asc" },
+        take: 1,
+        select: {
+          src: true,
+          alt: true,
+          position: true,
+        },
+      },
+    },
   });
 
   if (!product) {
@@ -207,6 +260,17 @@ export const searchProducts = async (query: string): Promise<Product[]> => {
       ],
     },
     orderBy: { created_at: "desc" },
+    include: {
+      images: {
+        orderBy: { position: "asc" },
+        take: 1,
+        select: {
+          src: true,
+          alt: true,
+          position: true,
+        },
+      },
+    },
   });
 
   return products.map(mapProduct);
@@ -234,6 +298,17 @@ export const getProductsByVendor = async (
       skip,
       take: limit,
       orderBy: { [sortBy]: order },
+      include: {
+        images: {
+          orderBy: { position: "asc" },
+          take: 1,
+          select: {
+            src: true,
+            alt: true,
+            position: true,
+          },
+        },
+      },
     }),
     prisma.product.count({
       where: {
@@ -277,6 +352,17 @@ export const getProductsByType = async (
       skip,
       take: limit,
       orderBy: { [sortBy]: order },
+      include: {
+        images: {
+          orderBy: { position: "asc" },
+          take: 1,
+          select: {
+            src: true,
+            alt: true,
+            position: true,
+          },
+        },
+      },
     }),
     prisma.product.count({
       where: {
@@ -319,6 +405,17 @@ export const getProductsByTag = async (
       skip,
       take: limit,
       orderBy: { [sortBy]: order },
+      include: {
+        images: {
+          orderBy: { position: "asc" },
+          take: 1,
+          select: {
+            src: true,
+            alt: true,
+            position: true,
+          },
+        },
+      },
     }),
     prisma.product.count({
       where: {
