@@ -3,16 +3,25 @@
 import { use, useState, useEffect } from "react";
 import Image from "next/image";
 import { useProductById, useProductVariants } from "@/hooks/useProducts";
+import { useCart } from "@/contexts/CartContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
 import { ArrowLeft, ShoppingCart, ChevronLeft, ChevronRight, X } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 export default function ProductDetailPage({
   params,
@@ -27,11 +36,13 @@ export default function ProductDetailPage({
     !isNaN(productId)
   );
   const { data: variantsData } = useProductVariants(productId, !isNaN(productId));
+  const { addToCart, isInCart } = useCart();
 
   // All hooks must be called before any conditional returns
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [lightboxImageIndex, setLightboxImageIndex] = useState(0);
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
 
   // Get images from product data (safe to use even if productData is undefined)
   const images = productData?.data?.images || [];
@@ -41,6 +52,11 @@ export default function ProductDetailPage({
     if (productData?.data) {
       setSelectedImageIndex(0);
       setLightboxImageIndex(0);
+      // Set default variant to first available variant
+      const firstAvailableVariant = productData.data.variants?.find(
+        (v) => v.available !== false
+      );
+      setSelectedVariantId(firstAvailableVariant?.id ?? null);
     }
   }, [productData?.data?.id]);
 
@@ -131,6 +147,28 @@ export default function ProductDetailPage({
 
   const handleLightboxNext = () => {
     setLightboxImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+  };
+
+  const handleAddToCart = () => {
+    if (!product) return;
+
+    // Check if variant is required and selected
+    if (product.variants && product.variants.length > 0 && !selectedVariantId) {
+      toast.error("Please select a variant");
+      return;
+    }
+
+    // Check if selected variant is available
+    if (selectedVariantId) {
+      const variant = product.variants?.find((v) => v.id === selectedVariantId);
+      if (variant && variant.available === false) {
+        toast.error("This variant is out of stock");
+        return;
+      }
+    }
+
+    addToCart(product, selectedVariantId, 1);
+    toast.success("Added to cart!");
   };
 
   return (
@@ -298,51 +336,110 @@ export default function ProductDetailPage({
             </Card>
           )}
 
-          {/* Variants */}
+          {/* Variant Selection */}
           {product.variants && product.variants.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Variants</CardTitle>
-                <CardDescription>Available options for this product</CardDescription>
+                <CardTitle>Select Variant</CardTitle>
+                <CardDescription>Choose an option for this product</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {product.variants.map((variant) => (
-                    <div
-                      key={variant.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
-                    >
-                      <div>
-                        <p className="font-medium">
-                          {variant.title || `Variant ${variant.id}`}
-                        </p>
-                        {variant.sku && (
-                          <p className="text-sm text-muted-foreground">
-                            SKU: {variant.sku}
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        {variant.price && (
-                          <p className="font-semibold">
-                            ${parseFloat(variant.price).toFixed(2)}
-                          </p>
-                        )}
-                        {variant.available !== null && (
-                          <Badge
-                            variant={variant.available ? "default" : "secondary"}
-                            className="text-xs"
-                          >
-                            {variant.available ? "Available" : "Out of Stock"}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <Select
+                  value={selectedVariantId?.toString() || ""}
+                  onValueChange={(value) => setSelectedVariantId(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a variant" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {product.variants.map((variant) => (
+                      <SelectItem
+                        key={variant.id}
+                        value={variant.id.toString()}
+                        disabled={variant.available === false}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span>
+                            {variant.title || `Variant ${variant.id}`}
+                            {variant.available === false && " (Out of Stock)"}
+                          </span>
+                          {variant.price && (
+                            <span className="ml-4 font-semibold">
+                              ${parseFloat(variant.price).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedVariantId && (
+                  <div className="mt-4 p-3 bg-muted rounded-lg">
+                    {(() => {
+                      const variant = product.variants?.find(
+                        (v) => v.id === selectedVariantId
+                      );
+                      return variant ? (
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">
+                              {variant.title || `Variant ${variant.id}`}
+                            </span>
+                            {variant.price && (
+                              <span className="font-semibold">
+                                ${parseFloat(variant.price).toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                          {variant.sku && (
+                            <p className="text-xs text-muted-foreground">
+                              SKU: {variant.sku}
+                            </p>
+                          )}
+                          {variant.available !== null && (
+                            <Badge
+                              variant={variant.available ? "default" : "secondary"}
+                              className="text-xs"
+                            >
+                              {variant.available ? "Available" : "Out of Stock"}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
+
+          {/* Price Display */}
+          {(() => {
+            const variant = selectedVariantId
+              ? product.variants?.find((v) => v.id === selectedVariantId)
+              : product.variants?.[0];
+            const price = variant?.price
+              ? parseFloat(variant.price)
+              : product.variants?.[0]?.price
+              ? parseFloat(product.variants[0].price)
+              : null;
+
+            return price !== null ? (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold">${price.toFixed(2)}</span>
+                    {variant?.compare_at_price &&
+                      parseFloat(variant.compare_at_price) > price && (
+                        <span className="text-lg text-muted-foreground line-through">
+                          ${parseFloat(variant.compare_at_price).toFixed(2)}
+                        </span>
+                      )}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null;
+          })()}
 
           {/* Options */}
           {product.options && product.options.length > 0 && (
@@ -369,9 +466,21 @@ export default function ProductDetailPage({
             </Card>
           )}
 
-          <Button size="lg" className="w-full">
+          <Button
+            size="lg"
+            className="w-full"
+            onClick={handleAddToCart}
+            disabled={
+              (product.variants && product.variants.length > 0 && !selectedVariantId) ||
+              (selectedVariantId &&
+                product.variants?.find((v) => v.id === selectedVariantId)?.available ===
+                  false)
+            }
+          >
             <ShoppingCart className="mr-2 h-4 w-4" />
-            Add to Cart
+            {isInCart(product.id, selectedVariantId)
+              ? "Already in Cart"
+              : "Add to Cart"}
           </Button>
         </div>
       </div>

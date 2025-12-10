@@ -27,3 +27,6 @@ export interface ApiErrorResponse {
     [key: string]: unknown;
   };
 }
+
+// Re-export cart types
+export * from "./cart";
